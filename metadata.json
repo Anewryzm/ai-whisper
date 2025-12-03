@@ -1,0 +1,7 @@
+{
+  "name": "Groq Whisper Transcriber",
+  "description": "A minimalist audio transcription app using Groq's Whisper Large V3 Turbo model.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
