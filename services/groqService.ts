@@ -2,10 +2,7 @@ import { TranscriptionResponse, GroqErrorResponse } from '../types';
 import { ASSISTANT_SYSTEM_PROMPT } from '../constants/prompts';
 
 // ==================================================================================
-// 🔑 API KEY CONFIGURATION
-// ==================================================================================
-const GROQ_API_KEY = ""; 
-
+// CONSTANTS
 // ==================================================================================
 
 const TRANSCRIPTION_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -16,9 +13,9 @@ const CHAT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const WHISPER_MODEL_ID = "whisper-large-v3-turbo";
 const LLM_MODEL_ID = "llama-3.3-70b-versatile";
 
-export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
-  if (!GROQ_API_KEY) {
-    throw new Error("API Key is missing. Please add your Groq API Key in services/groqService.ts");
+export const transcribeAudio = async (apiKey: string, audioBlob: Blob): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please configure it in the settings.");
   }
 
   const formData = new FormData();
@@ -34,7 +31,7 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     const response = await fetch(TRANSCRIPTION_ENDPOINT, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: formData,
     });
@@ -53,9 +50,9 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
   }
 };
 
-export const generateActionPlan = async (transcriptionText: string): Promise<string> => {
-  if (!GROQ_API_KEY) {
-    throw new Error("API Key is missing.");
+export const generateActionPlan = async (apiKey: string, transcriptionText: string): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please configure it in the settings.");
   }
 
   const payload = {
@@ -78,7 +75,7 @@ export const generateActionPlan = async (transcriptionText: string): Promise<str
     const response = await fetch(CHAT_ENDPOINT, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
