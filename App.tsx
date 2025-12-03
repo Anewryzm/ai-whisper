@@ -6,10 +6,33 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { transcribeAudio, generateActionPlan } from './services/groqService';
 import { RecorderState } from './types';
 
-// Detectar variable de entorno de forma segura
-const ENV_API_KEY = (typeof process !== 'undefined' && process.env && process.env.GROQ_API_KEY) 
-  ? process.env.GROQ_API_KEY 
-  : '';
+// Función robusta para detectar la API Key en diferentes entornos de construcción (Vite, CRA, Webpack)
+const getSystemApiKey = (): string => {
+  // 1. Intento: Vite Standard (import.meta.env)
+  try {
+    // @ts-ignore - Ignoramos error de TS si el target no es ESNext
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GROQ_API_KEY) {
+      // @ts-ignore
+      return import.meta.env.VITE_GROQ_API_KEY;
+    }
+  } catch (e) {
+    // Continuar si falla import.meta
+  }
+
+  // 2. Intento: Process Env (CRA, Next.js, Webpack, Node)
+  if (typeof process !== 'undefined' && process.env) {
+    // Prioridad 1: Prefijo REACT_APP_ (Create React App)
+    if (process.env.REACT_APP_GROQ_API_KEY) return process.env.REACT_APP_GROQ_API_KEY;
+    // Prioridad 2: Prefijo VITE_ en process.env (A veces inyectado)
+    if (process.env.VITE_GROQ_API_KEY) return process.env.VITE_GROQ_API_KEY;
+    // Prioridad 3: Nombre directo (Legacy o configuración manual de servidor)
+    if (process.env.GROQ_API_KEY) return process.env.GROQ_API_KEY;
+  }
+
+  return '';
+};
+
+const ENV_API_KEY = getSystemApiKey();
 
 function App() {
   const [recorderState, setRecorderState] = useState<RecorderState>(RecorderState.IDLE);

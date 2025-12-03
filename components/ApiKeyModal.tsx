@@ -65,7 +65,7 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
                   <div>
                     <h3 className="text-sm font-medium text-green-400">Configurada por Entorno</h3>
                     <p className="text-xs text-green-200/70 mt-1 leading-relaxed">
-                      La aplicación ha detectado una API Key configurada a través de las variables de entorno del sistema (<code>GROQ_API_KEY</code>). No es necesario que introduzcas una manualmente.
+                      La aplicación ha detectado una API Key configurada a través de las variables de entorno del sistema (como <code>VITE_GROQ_API_KEY</code> o <code>REACT_APP_GROQ_API_KEY</code>). No es necesario que introduzcas una manualmente.
                     </p>
                   </div>
                 </div>
