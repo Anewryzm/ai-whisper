@@ -10,27 +10,46 @@ import { RecorderState } from './types';
 // SYSTEM KEY DETECTION
 // ============================================================================
 
-const getEnvVar = (viteKey: string, reactKey: string, nodeKey: string): string => {
-  try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[viteKey]) {
-      // @ts-ignore
-      return import.meta.env[viteKey];
-    }
-  } catch (e) {}
+// Vite reemplaza estáticamente las variables que empiezan con VITE_ durante el build.
+// Para que funcione en producción (Vercel), debemos acceder a ellas explícitamente
+// y no a través de una función dinámica con nombres de variables.
+const getEnvironmentKeys = () => {
+  let groqKey = '';
+  let keywordsKey = '';
 
-  if (typeof process !== 'undefined' && process.env) {
-    if (process.env[reactKey]) return process.env[reactKey];
-    if (process.env[viteKey]) return process.env[viteKey];
-    if (process.env[nodeKey]) return process.env[nodeKey];
+  try {
+    // @ts-ignore - Vite specific
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      if (import.meta.env.VITE_GROQ_API_KEY) {
+        // @ts-ignore
+        groqKey = import.meta.env.VITE_GROQ_API_KEY;
+      }
+      // @ts-ignore
+      if (import.meta.env.VITE_KEYWORDS_API_KEY) {
+        // @ts-ignore
+        keywordsKey = import.meta.env.VITE_KEYWORDS_API_KEY;
+      }
+    }
+  } catch (e) {
+    console.debug('Environment variables not accessible via import.meta');
   }
-  return '';
+
+  // Fallback para entornos que usen process.env (opcional)
+  if (!groqKey && typeof process !== 'undefined' && process.env) {
+    if (process.env.VITE_GROQ_API_KEY) groqKey = process.env.VITE_GROQ_API_KEY;
+    else if (process.env.GROQ_API_KEY) groqKey = process.env.GROQ_API_KEY;
+  }
+
+  if (!keywordsKey && typeof process !== 'undefined' && process.env) {
+    if (process.env.VITE_KEYWORDS_API_KEY) keywordsKey = process.env.VITE_KEYWORDS_API_KEY;
+    else if (process.env.KEYWORDS_API_KEY) keywordsKey = process.env.KEYWORDS_API_KEY;
+  }
+
+  return { groqKey, keywordsKey };
 };
 
-// Detectar Keys del entorno
-const ENV_GROQ_KEY = getEnvVar('VITE_GROQ_API_KEY', 'REACT_APP_GROQ_API_KEY', 'GROQ_API_KEY');
-// Updated to match the requested KEYWORDS_API_KEY name
-const ENV_KEYWORDS_KEY = getEnvVar('VITE_KEYWORDS_API_KEY', 'REACT_APP_KEYWORDS_API_KEY', 'KEYWORDS_API_KEY');
+const { groqKey: ENV_GROQ_KEY, keywordsKey: ENV_KEYWORDS_KEY } = getEnvironmentKeys();
 
 function App() {
   const [recorderState, setRecorderState] = useState<RecorderState>(RecorderState.IDLE);
