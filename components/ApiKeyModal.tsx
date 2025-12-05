@@ -4,43 +4,49 @@ import { X, Key, Save, ExternalLink, ShieldCheck } from 'lucide-react';
 interface ApiKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (key: string) => void;
-  currentKey: string;
-  isEnvSet: boolean;
+  onSave: (groqKey: string, keywordsKey: string) => void;
+  currentGroqKey: string;
+  currentKeywordsKey: string;
+  isGroqEnvSet: boolean;
+  isKeywordsEnvSet: boolean;
 }
 
 export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({ 
   isOpen, 
   onClose, 
   onSave, 
-  currentKey,
-  isEnvSet 
+  currentGroqKey,
+  currentKeywordsKey,
+  isGroqEnvSet,
+  isKeywordsEnvSet
 }) => {
-  const [inputValue, setInputValue] = useState('');
+  const [groqInput, setGroqInput] = useState('');
+  const [keywordsInput, setKeywordsInput] = useState('');
 
   useEffect(() => {
     if (isOpen) {
-      setInputValue(currentKey);
+      setGroqInput(currentGroqKey);
+      setKeywordsInput(currentKeywordsKey);
     }
-  }, [isOpen, currentKey]);
+  }, [isOpen, currentGroqKey, currentKeywordsKey]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(inputValue);
+    onSave(groqInput, keywordsInput);
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-white/5">
           <div className="flex items-center gap-2 text-white">
-            <Key className={`w-5 h-5 ${isEnvSet ? 'text-green-400' : 'text-indigo-400'}`} />
-            <h2 className="font-semibold tracking-tight">Configuración API</h2>
+            <Key className="w-5 h-5 text-indigo-400" />
+            <h2 className="font-semibold tracking-tight">Configuración de APIs</h2>
           </div>
           <button 
             onClick={onClose}
@@ -51,73 +57,91 @@ export const ApiKeyModal: React.FC<ApiKeyModalProps> = ({
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          
+          {/* Groq Section */}
           <div className="space-y-2">
-            <label htmlFor="apiKey" className="block text-sm font-medium text-neutral-300">
-              Groq API Key
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="groqKey" className="flex items-center gap-2 text-sm font-medium text-neutral-300">
+                <span>Groq API Key</span>
+                <span className="text-[10px] uppercase bg-white/10 px-1.5 py-0.5 rounded text-neutral-400">Transcripción</span>
+              </label>
+            </div>
             
-            {isEnvSet ? (
-              // Estado: Variable de Entorno Detectada
-              <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck className="w-5 h-5 text-green-400 mt-0.5" />
-                  <div>
-                    <h3 className="text-sm font-medium text-green-400">Configurada por Entorno</h3>
-                    <p className="text-xs text-green-200/70 mt-1 leading-relaxed">
-                      La aplicación ha detectado una API Key configurada a través de las variables de entorno del sistema (como <code>VITE_GROQ_API_KEY</code> o <code>REACT_APP_GROQ_API_KEY</code>). No es necesario que introduzcas una manualmente.
-                    </p>
-                  </div>
+            {isGroqEnvSet ? (
+              <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-3">
+                <div className="flex items-center gap-2 text-green-400">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span className="text-sm font-medium">Configurada por Entorno</span>
                 </div>
               </div>
             ) : (
-              // Estado: Input Manual
-              <>
-                <div className="relative">
-                  <input
-                    id="apiKey"
-                    type="password"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="gsk_..."
-                    className="w-full bg-[#0f0f0f] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-sm"
-                    autoFocus
-                  />
+              <div className="relative">
+                <input
+                  id="groqKey"
+                  type="password"
+                  value={groqInput}
+                  onChange={(e) => setGroqInput(e.target.value)}
+                  placeholder="gsk_..."
+                  className="w-full bg-[#0f0f0f] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-sm"
+                />
+                <div className="mt-1.5 text-xs text-neutral-500 text-right">
+                  <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">Obtener Key</a>
                 </div>
-                <p className="text-xs text-neutral-500 flex items-center gap-1">
-                  Tu clave se guarda localmente en tu navegador.
-                  <a 
-                    href="https://console.groq.com/keys" 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="text-indigo-400 hover:text-indigo-300 hover:underline inline-flex items-center gap-0.5"
-                  >
-                    Obtener Key <ExternalLink className="w-3 h-3" />
-                  </a>
-                </p>
-              </>
+              </div>
             )}
           </div>
 
-          <div className="pt-2 flex justify-end gap-3">
+          {/* Keywords AI Section */}
+          <div className="space-y-2 pt-2 border-t border-white/5">
+            <div className="flex items-center justify-between pt-2">
+              <label htmlFor="keywordsKey" className="flex items-center gap-2 text-sm font-medium text-neutral-300">
+                 <span>Keywords AI API Key</span>
+                 <span className="text-[10px] uppercase bg-white/10 px-1.5 py-0.5 rounded text-neutral-400">Chat / LLM</span>
+              </label>
+            </div>
+
+            {isKeywordsEnvSet ? (
+               <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-3">
+                <div className="flex items-center gap-2 text-green-400">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span className="text-sm font-medium">Configurada por Entorno</span>
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  id="keywordsKey"
+                  type="password"
+                  value={keywordsInput}
+                  onChange={(e) => setKeywordsInput(e.target.value)}
+                  placeholder="kw-..."
+                  className="w-full bg-[#0f0f0f] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-mono text-sm"
+                />
+                <div className="mt-1.5 text-xs text-neutral-500 text-right">
+                   <a href="https://keywordsai.co/" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">Obtener Key</a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="pt-4 flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white hover:bg-white/5 transition-colors"
             >
-              {isEnvSet ? 'Cerrar' : 'Cancelar'}
+              Cancelar
             </button>
             
-            {!isEnvSet && (
-              <button
-                type="submit"
-                disabled={!inputValue.trim()}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-900/20 transition-all"
-              >
-                <Save className="w-4 h-4" />
-                Guardar
-              </button>
-            )}
+            <button
+              type="submit"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-900/20 transition-all"
+            >
+              <Save className="w-4 h-4" />
+              Guardar Configuración
+            </button>
           </div>
         </form>
       </div>

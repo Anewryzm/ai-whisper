@@ -6,16 +6,16 @@ import { ASSISTANT_SYSTEM_PROMPT } from '../constants/prompts';
 // ==================================================================================
 
 const TRANSCRIPTION_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions";
-const CHAT_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const CHAT_ENDPOINT = "https://api.keywordsai.co/api/chat/completions";
 
-// Usamos llama-3.3-70b-versatile ya que es el modelo de razonamiento más capaz disponible en Groq
-// y coincide con el ejemplo curl proporcionado.
+// Modelo de transcripción (Directo a Groq)
 const WHISPER_MODEL_ID = "whisper-large-v3-turbo";
-const LLM_MODEL_ID = "llama-3.3-70b-versatile";
+// Modelo de chat (Via Keywords AI proxy a Groq)
+const LLM_MODEL_ID = "groq/llama-3.3-70b-versatile";
 
-export const transcribeAudio = async (apiKey: string, audioBlob: Blob): Promise<string> => {
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please configure it in the settings.");
+export const transcribeAudio = async (groqApiKey: string, audioBlob: Blob): Promise<string> => {
+  if (!groqApiKey) {
+    throw new Error("Groq API Key is missing. Please configure it in the settings.");
   }
 
   const formData = new FormData();
@@ -31,7 +31,7 @@ export const transcribeAudio = async (apiKey: string, audioBlob: Blob): Promise<
     const response = await fetch(TRANSCRIPTION_ENDPOINT, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${groqApiKey}`,
       },
       body: formData,
     });
@@ -50,9 +50,9 @@ export const transcribeAudio = async (apiKey: string, audioBlob: Blob): Promise<
   }
 };
 
-export const generateActionPlan = async (apiKey: string, transcriptionText: string): Promise<string> => {
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please configure it in the settings.");
+export const generateActionPlan = async (keywordsAiApiKey: string, transcriptionText: string): Promise<string> => {
+  if (!keywordsAiApiKey) {
+    throw new Error("Keywords AI API Key is missing. Please configure it in the settings.");
   }
 
   const payload = {
@@ -75,7 +75,7 @@ export const generateActionPlan = async (apiKey: string, transcriptionText: stri
     const response = await fetch(CHAT_ENDPOINT, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${keywordsAiApiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
@@ -90,7 +90,7 @@ export const generateActionPlan = async (apiKey: string, transcriptionText: stri
     return data.choices[0]?.message?.content || "No se pudo generar el plan de acción.";
 
   } catch (error) {
-    console.error("Groq Chat Error:", error);
+    console.error("Keywords AI Chat Error:", error);
     throw error;
   }
 };
