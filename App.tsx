@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Settings, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Settings, ShieldCheck, AlertCircle, Server } from 'lucide-react';
 import { ControlIsland } from './components/ControlIsland';
 import { TranscriptionDisplay } from './components/TranscriptionDisplay';
 import { ApiKeyModal } from './components/ApiKeyModal';
@@ -10,40 +11,20 @@ import { RecorderState } from './types';
 // SYSTEM KEY DETECTION
 // ============================================================================
 
-// Vite reemplaza estáticamente las variables que empiezan con VITE_ durante el build.
-// Para que funcione en producción (Vercel), debemos acceder a ellas explícitamente
-// y no a través de una función dinámica con nombres de variables.
+// Detectamos si existen keys en el entorno local (Vite) O si estamos en modo servidor implícito.
+// Como se han removido los prefijos VITE_, el frontend no verá las keys del servidor.
+// Esto es correcto por seguridad.
 const getEnvironmentKeys = () => {
   let groqKey = '';
   let keywordsKey = '';
 
   try {
-    // @ts-ignore - Vite specific
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      if (import.meta.env.VITE_GROQ_API_KEY) {
-        // @ts-ignore
-        groqKey = import.meta.env.VITE_GROQ_API_KEY;
-      }
-      // @ts-ignore
-      if (import.meta.env.VITE_KEYWORDS_API_KEY) {
-        // @ts-ignore
-        keywordsKey = import.meta.env.VITE_KEYWORDS_API_KEY;
-      }
-    }
+    // @ts-ignore
+    if (import.meta.env?.VITE_GROQ_API_KEY) groqKey = import.meta.env.VITE_GROQ_API_KEY;
+    // @ts-ignore
+    if (import.meta.env?.VITE_KEYWORDS_API_KEY) keywordsKey = import.meta.env.VITE_KEYWORDS_API_KEY;
   } catch (e) {
-    console.debug('Environment variables not accessible via import.meta');
-  }
-
-  // Fallback para entornos que usen process.env (opcional)
-  if (!groqKey && typeof process !== 'undefined' && process.env) {
-    if (process.env.VITE_GROQ_API_KEY) groqKey = process.env.VITE_GROQ_API_KEY;
-    else if (process.env.GROQ_API_KEY) groqKey = process.env.GROQ_API_KEY;
-  }
-
-  if (!keywordsKey && typeof process !== 'undefined' && process.env) {
-    if (process.env.VITE_KEYWORDS_API_KEY) keywordsKey = process.env.VITE_KEYWORDS_API_KEY;
-    else if (process.env.KEYWORDS_API_KEY) keywordsKey = process.env.KEYWORDS_API_KEY;
+    // Ignore errors
   }
 
   return { groqKey, keywordsKey };
@@ -70,10 +51,6 @@ function App() {
   // Determinar qué Keys usar
   const effectiveGroqKey = ENV_GROQ_KEY || userGroqKey;
   const effectiveKeywordsKey = ENV_KEYWORDS_KEY || userKeywordsKey;
-
-  const isGroqReady = !!effectiveGroqKey;
-  const isKeywordsReady = !!effectiveKeywordsKey;
-  const isAllReady = isGroqReady && isKeywordsReady;
 
   useEffect(() => {
     // Cargar Keys del localStorage
@@ -151,21 +128,19 @@ function App() {
   const handleSendAudio = async () => {
     if (!audioBlob) return;
 
-    if (!isAllReady) {
-      setError('Faltan configuraciones. Por favor revisa las API Keys en el panel de configuración.');
-      setIsSettingsOpen(true);
-      return;
-    }
+    // NOTA: Eliminamos la validación bloqueante de API Keys en el frontend.
+    // Asumimos que si no están aquí, están en el servidor (Vercel Env Vars).
+    // Si faltan en ambos lados, la API arrojará un error 500 que capturaremos.
 
     setRecorderState(RecorderState.PROCESSING);
     setError(null);
 
     try {
-      // Paso 1: Transcribir (Usa Groq Key)
+      // Paso 1: Transcribir (Endpoint Serverless)
       setProcessingStep('transcribing');
       const rawText = await transcribeAudio(effectiveGroqKey, audioBlob);
       
-      // Paso 2: Generar Plan (Usa Keywords AI Key)
+      // Paso 2: Generar Plan (Endpoint Serverless)
       setProcessingStep('generating');
       const actionPlan = await generateActionPlan(effectiveKeywordsKey, rawText);
 
@@ -182,7 +157,10 @@ function App() {
 
   // Helper para mostrar estado de las keys en el header
   const renderStatusBadge = () => {
-    if (isAllReady) {
+    const hasLocalKeys = !!userGroqKey || !!userKeywordsKey;
+    const hasEnvKeys = !!ENV_GROQ_KEY || !!ENV_KEYWORDS_KEY;
+
+    if (hasLocalKeys || hasEnvKeys) {
       return (
         <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-700">
           <div className="relative flex h-2 w-2">
@@ -192,34 +170,21 @@ function App() {
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
             <span className="text-xs font-medium text-green-400/90 tracking-wide">
-              Systems Online
+              {hasEnvKeys ? 'Dev Mode' : 'Client Keys'}
             </span>
           </div>
         </div>
       );
     }
 
-    if (isGroqReady || isKeywordsReady) {
-      return (
-        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-700">
-           <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
-           <div className="flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="text-xs font-medium text-yellow-400/90 tracking-wide">
-              Config Partial
-            </span>
-          </div>
-        </div>
-      );
-    }
-
+    // Estado por defecto: Asumimos modo servidor seguro (Vercel)
     return (
-      <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-red-500/5 border border-red-500/20 backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-700">
-        <div className="h-2 w-2 rounded-full bg-red-500/50"></div>
+      <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 backdrop-blur-md animate-in fade-in slide-in-from-left-4 duration-700">
+        <div className="h-2 w-2 rounded-full bg-indigo-400"></div>
         <div className="flex items-center gap-1.5">
-          <Settings className="w-3.5 h-3.5 text-red-400" />
-          <span className="text-xs font-medium text-red-400/90 tracking-wide">
-            Setup Needed
+          <Server className="w-3.5 h-3.5 text-indigo-400" />
+          <span className="text-xs font-medium text-indigo-400/90 tracking-wide">
+            Server Mode
           </span>
         </div>
       </div>
@@ -253,12 +218,8 @@ function App() {
         <div>
           <button 
             onClick={() => setIsSettingsOpen(true)}
-            className={`p-2 rounded-full transition-all duration-200 group ${
-              !isAllReady 
-                ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10 animate-pulse-fast' 
-                : 'text-neutral-400 hover:text-white hover:bg-white/10'
-            }`}
-            title="Configurar API Keys"
+            className="p-2 rounded-full transition-all duration-200 group text-neutral-400 hover:text-white hover:bg-white/10"
+            title="Configurar API Keys (Opcional)"
           >
             <Settings className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" />
           </button>
