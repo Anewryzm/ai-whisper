@@ -5,34 +5,33 @@ import { ASSISTANT_SYSTEM_PROMPT } from '../constants/prompts';
 // CONSTANTS
 // ==================================================================================
 
-const TRANSCRIPTION_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions";
+const TRANSCRIPTION_ENDPOINT = "/api/transcribe";
 const CHAT_ENDPOINT = "https://api.keywordsai.co/api/chat/completions";
 
-// Modelo de transcripción (Directo a Groq)
-const WHISPER_MODEL_ID = "whisper-large-v3-turbo";
 // Modelo de chat (Via Keywords AI proxy a Groq)
 const LLM_MODEL_ID = "groq/llama-3.3-70b-versatile";
 
 export const transcribeAudio = async (groqApiKey: string, audioBlob: Blob): Promise<string> => {
-  if (!groqApiKey) {
-    throw new Error("Groq API Key is missing. Please configure it in the settings.");
-  }
-
+  // Logic moved to /api/transcribe to prevent Key exposure.
+  // We still accept groqApiKey to support "Bring Your Own Key" mode from the UI
+  // by passing it in a custom header if available.
+  
   const formData = new FormData();
   
   // Groq requires a file with a name/extension
   const file = new File([audioBlob], "recording.webm", { type: audioBlob.type || 'audio/webm' });
   
   formData.append("file", file);
-  formData.append("model", WHISPER_MODEL_ID);
-  formData.append("response_format", "json");
 
   try {
+    const headers: Record<string, string> = {};
+    if (groqApiKey) {
+      headers["x-groq-api-key"] = groqApiKey;
+    }
+
     const response = await fetch(TRANSCRIPTION_ENDPOINT, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${groqApiKey}`,
-      },
+      headers: headers,
       body: formData,
     });
 
